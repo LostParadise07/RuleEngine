@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rule Engine</title>
+</head>
+<body>
+    <h1>Rule Engine</h1>
+    
+    <!-- List existing rules -->
+    <h2>Existing Rules</h2>
+    <ul>
+        {% for rule in rules %}
+        <li>
+            <strong>{{ rule.name }}</strong>: {{ rule.rule_string }}<br>
+            <button onclick="evaluateRule('{{ rule.id }}')">Evaluate Rule</button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Form to create a new rule -->
+    <h2>Create New Rule</h2>
+    <form id="create-rule-form">
+        <input type="text" id="rule-name" placeholder="Rule Name" required>
+        <textarea id="rule-string" placeholder="Enter rule (e.g., age > 30 AND department = 'Sales')" required></textarea>
+        <button type="submit">Create Rule</button>
+    </form>
+
+    <!-- Section to combine rules -->
+    <h2>Combine Rules</h2>
+    <form id="combine-rules-form">
+        <label>Select rules to combine:</label><br>
+        {% for rule in rules %}
+        <input type="checkbox" name="combine-rule" value="{{ rule.rule_string }}"> {{ rule.name }}<br>
+        {% endfor %}
+        <button type="submit">Combine Selected Rules</button>
+    </form>
+
+    <!-- Section to evaluate a rule -->
+    <h2>Evaluate Rule</h2>
+    <form id="evaluate-rule-form">
+        <input type="hidden" id="evaluate-rule-id">
+        <textarea id="evaluate-data" placeholder="Enter user data as JSON (e.g., {'age': 35, 'salary': 60000})" required></textarea>
+        <button type="submit">Evaluate</button>
+    </form>
+
+    <!-- Result display -->
+    <h2>Result</h2>
+    <p id="result-display"></p>
+
+    <script>
+        // Handle form submission for creating a new rule
+        document.getElementById('create-rule-form').onsubmit = async function (e) {
+            e.preventDefault();
+            const ruleName = document.getElementById('rule-name').value;
+            const ruleString = document.getElementById('rule-string').value;
+
+            const response = await fetch('/api/create_rule/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: ruleName, rule_string: ruleString })
+            });
+
+            if (response.ok) {
+                alert('Rule created successfully!');
+                location.reload(); // Reload the page to show the new rule
+            } else {
+                alert('Error creating rule');
+            }
+        };
+
+        // Handle form submission for combining rules
+        document.getElementById('combine-rules-form').onsubmit = async function (e) {
+            e.preventDefault();
+            const ruleStrings = Array.from(document.querySelectorAll('input[name="combine-rule"]:checked'))
+                                     .map(checkbox => checkbox.value);
+
+            const response = await fetch('/api/combine_rules/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rules: ruleStrings })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert('Rules combined successfully!');
+                console.log(result);
+            } else {
+                alert('Error combining rules');
+            }
+        };
+
+        // Handle evaluation of a rule
+        async function evaluateRule(ruleId) {
+            document.getElementById('evaluate-rule-id').value = ruleId;
+        }
+
+        document.getElementById('evaluate-rule-form').onsubmit = async function (e) {
+            e.preventDefault();
+            const ruleId = document.getElementById('evaluate-rule-id').value;
+            const data = JSON.parse(document.getElementById('evaluate-data').value);
+
+            const response = await fetch('/api/evaluate_rule/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rule_id: ruleId, data: data })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                document.getElementById('result-display').textContent = `Result: ${result.result}`;
+            } else {
+                alert('Error evaluating rule');
+            }
+        };
+    </script>
+</body>
+</html>
